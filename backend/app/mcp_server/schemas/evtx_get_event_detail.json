@@ -1,0 +1,19 @@
+{
+  "name": "evtx.get_event_detail",
+  "description": "Get the full raw XML and normalized fields for one specific event by its UID.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "case_id": {
+        "type": "string",
+        "description": "The case UUID."
+      },
+      "event_uid": {
+        "type": "string",
+        "description": "The event's unique identifier, as returned by evtx.query_events."
+      }
+    },
+    "required": ["case_id", "event_uid"],
+    "additionalProperties": false
+  }
+}

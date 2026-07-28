@@ -1,0 +1,123 @@
+[project]
+name = "gologs-backend"
+version = "0.1.0"
+description = "GoLogs — Interrogate Your Evidence. Local-first AI-augmented DFIR copilot backend."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "mcp>=1.1.0",
+    "python-evtx>=0.8.1",
+    "defusedxml>=0.7.1",
+    "volatility3>=2.9.0",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "structlog>=24.4",
+    "httpx>=0.27",
+    "python-multipart>=0.0.12",
+    "websockets>=13.0",
+    "reportlab>=4.2",
+    "markdown>=3.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "pytest-benchmark>=4.0",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "bandit>=1.7",
+    "pip-audit>=2.7",
+    "import-linter>=2.1",
+    "locust>=2.32",
+    "types-defusedxml>=0.7",
+    "pypdf>=6.14.2",  # test-only: verifies our own generated PDFs are valid
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+# The adversarial corpus is full of long, deliberately realistic
+# evidence-field strings (attack payloads) — wrapping them for line
+# length would hurt readability of the actual fixture data for no benefit.
+"tests/security/injection_harness/corpus.py" = ["E501"]
+# Nested stdio_client/ClientSession context managers appear consistently
+# across the real-MCP-protocol integration tests; kept visually separated
+# (transport connection, then protocol session) rather than combined into
+# one long `async with A, B:` line.
+"tests/integration/test_mcp_server_protocol.py" = ["SIM117"]
+"tests/integration/test_orchestrator_real_mcp.py" = ["SIM117"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["app"]
+
+[[tool.mypy.overrides]]
+module = ["Evtx.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# mcp SDK's @server.list_tools()/@server.call_tool() decorators aren't
+# typed, which mypy strict would otherwise flag as "untyped-decorator" in
+# our code — this is a third-party stub gap, not a defect in server.py.
+module = ["app.mcp_server.server"]
+disallow_untyped_decorators = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra"
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.bandit]
+# B101 (assert-used) is skipped project-wide: both current usages
+# (orchestrator/tool_call_loop.py, api/ws_chat.py) are internal
+# invariant checks on our own prior control flow — e.g. "the AUTO_APPROVE
+# branch always populates this value" — not validation of external input,
+# so the "asserts are stripped under -O" caveat that makes B101 relevant
+# for security-critical checks doesn't apply here. Untrusted input
+# (evidence XML, tool arguments, uploaded filenames) is never validated
+# via assert anywhere in this codebase — see fs_sandbox.py, normalizer.py,
+# mem_analyzer.py's ALLOWED_PLUGINS check for how that's actually done.
+skips = ["B101"]
+
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "core has zero dependency on orchestrator, api, or mcp_server"
+type = "forbidden"
+source_modules = ["app.core"]
+forbidden_modules = ["app.orchestrator", "app.api", "app.mcp_server"]
+
+[[tool.importlinter.contracts]]
+name = "layered architecture: api -> orchestrator -> mcp_server -> core"
+type = "layers"
+layers = [
+    "app.api",
+    "app.orchestrator",
+    "app.mcp_server",
+    "app.core",
+]

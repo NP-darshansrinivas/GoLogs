@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  # Stage 1: Lint
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy --strict app/
+
+  # Stage 2: Unit tests
+  unit-tests:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/unit --cov=app --cov-report=xml --cov-fail-under=80
+      - uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: backend/coverage.xml
+
+  # Stage 3: Integration tests. Real SQLite (in-memory), a real MCP server
+  # subprocess, and Ollama mocked at the HTTP transport level (see
+  # docs/context_transfer.md for why a live Ollama isn't required for
+  # these -- the orchestration/permission-gate/injection-scanner logic
+  # downstream of the model response is exercised for real either way).
+  integration-tests:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: pytest tests/integration -v
+
+  # Stage 4: Security scan. Only MEDIUM+ severity fails the build -- see
+  # docs/context_transfer.md for the two accepted LOW-severity
+  # informational bandit findings (mere presence of subprocess/xml.etree
+  # imports, both already hardened at their actual call sites).
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: bandit -r app/ -c pyproject.toml -ll
+      - run: pip-audit
+
+  # Stage 5: Frontend
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  # Stage 6: OpenAPI contract check
+  openapi-contract:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: Check openapi.json is up to date
+        working-directory: .
+        run: python scripts/generate_openapi.py --check
+
+  # Stage 7: Container build + scan
+  container-build:
+    needs: [unit-tests, integration-tests, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        working-directory: .
+        run: docker build -t gologs-backend:ci ./backend
+      - name: Build frontend image
+        working-directory: .
+        run: docker build -t gologs-frontend:ci ./frontend
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: gologs-backend:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: gologs-frontend:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"

@@ -1,0 +1,34 @@
+# Optional override for reviewers who want a fully containerized Ollama
+# instead of the recommended native-install path (PRD §16).
+#
+# Higher RAM usage: 12GB+ recommended. This is NOT the default path —
+# [HW-RULE]'s <=10GB budget assumes Ollama runs natively, outside Docker.
+# Use only if you understand and accept the additional overhead.
+#
+# Usage:
+#   cp docker-compose.override.yml.example docker-compose.override.yml
+#   docker compose up
+#
+# (docker-compose.override.yml is gitignored — see backend/.gitignore /
+# repo-root .gitignore — so this file is never accidentally committed with
+# a reviewer's local edits.)
+
+services:
+  ollama:
+    image: ollama/ollama:latest
+    mem_limit: 8000m
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    # After first `docker compose up`, pull the model once:
+    #   docker compose exec ollama ollama pull llama3.1:8b-instruct-q4_K_M
+
+  backend:
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      - ollama
+
+volumes:
+  ollama-data:

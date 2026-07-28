@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, needed for changelog generation
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Verify CI-equivalent checks pass on the tagged commit
+        working-directory: backend
+        run: |
+          pip install -e ".[dev]"
+          ruff check .
+          mypy --strict app/
+          pytest tests/unit --cov=app --cov-fail-under=80
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Generate changelog from Conventional Commit history
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            RANGE="HEAD"
+          else
+            RANGE="$PREV_TAG..HEAD"
+          fi
+          {
+            echo "changelog<<EOF"
+            echo "## Changes"
+            echo
+            echo "### Features"
+            git log "$RANGE" --pretty=format:"- %s (%h)" --grep="^feat" -i || true
+            echo
+            echo "### Fixes"
+            git log "$RANGE" --pretty=format:"- %s (%h)" --grep="^fix" -i || true
+            echo
+            echo "### Other"
+            git log "$RANGE" --pretty=format:"- %s (%h)" --grep="^feat" --grep="^fix" -i --invert-grep || true
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build release ZIP
+        run: |
+          mkdir -p dist/gologs
+          rsync -a --exclude-from=.gitignore \
+            --exclude ".git" --exclude "dist" \
+            ./ dist/gologs/
+          cd dist && zip -r "gologs-${GITHUB_REF_NAME}.zip" gologs
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: ${{ steps.changelog.outputs.changelog }}
+          files: dist/gologs-${{ github.ref_name }}.zip
+          generate_release_notes: true

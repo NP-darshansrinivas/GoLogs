@@ -1,0 +1,30 @@
+# GoLogs demo Docker Compose stack (PRD §16).
+#
+# Ollama is intentionally NOT a compose service. Running it inside Docker
+# Desktop on Windows adds WSL2 VM overhead (typically 1.5-2.5 GB) on top of
+# model weights, risking a breach of [HW-RULE]'s <=10GB budget. Install
+# Ollama natively (the standard Windows installer) and run `ollama serve`
+# before `docker compose up` — the backend reaches it via
+# host.docker.internal:11434.
+#
+# For reviewers who explicitly want a fully containerized Ollama anyway
+# (accepting the higher RAM cost), see docker-compose.override.yml.example.
+version: "3"
+services:
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    ports:
+      - "9864:9864"
+    environment:
+      - SERVICE_PRECONDITION=namenode:9870
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000

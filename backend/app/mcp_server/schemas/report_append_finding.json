@@ -1,0 +1,41 @@
+{
+  "name": "report.append_finding",
+  "description": "Record an investigation finding on the case, citing the specific evidence it's based on. This is the only tool that mutates case state and always requires analyst confirmation before executing.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "case_id": {
+        "type": "string",
+        "description": "The case UUID."
+      },
+      "finding_text": {
+        "type": "string",
+        "description": "The finding, in plain language, suitable for inclusion in the investigation report."
+      },
+      "title": {
+        "type": "string",
+        "description": "Optional title for the finding."
+      },
+      "description": {
+        "type": "string",
+        "description": "Detailed description of the finding."
+      },
+      "severity": {
+        "type": "string",
+        "description": "Severity level (e.g. Low, Medium, High, Critical)."
+      },
+      "evidence_refs": {
+        "type": "array",
+        "description": "Event UIDs or memory-plugin-result IDs that support this finding.",
+        "items": {"type": "string"}
+      },
+      "evidence": {
+        "type": "array",
+        "description": "Evidence references supporting this finding.",
+        "items": {"type": "string"}
+      }
+    },
+    "required": ["case_id"],
+    "additionalProperties": true
+  }
+}

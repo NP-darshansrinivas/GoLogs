@@ -1,0 +1,15 @@
+{
+  "name": "mem.list_processes",
+  "description": "Get cached pslist/pstree output for a case's memory image, if already run. Read-only.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "case_id": {
+        "type": "string",
+        "description": "The case UUID."
+      }
+    },
+    "required": ["case_id"],
+    "additionalProperties": false
+  }
+}

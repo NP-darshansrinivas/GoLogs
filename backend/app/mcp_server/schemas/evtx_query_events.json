@@ -1,0 +1,43 @@
+{
+  "name": "evtx.query_events",
+  "description": "Query normalized Windows Event Log records for a case, with optional filters. Read-only.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "case_id": {
+        "type": "string",
+        "description": "The case UUID."
+      },
+      "channel": {
+        "type": "string",
+        "description": "Filter to a specific EVTX channel, e.g. 'Security', 'System', 'Microsoft-Windows-PowerShell/Operational'."
+      },
+      "event_id": {
+        "type": "integer",
+        "description": "Filter to a specific Windows Event ID, e.g. 4624 for a successful logon."
+      },
+      "time_range": {
+        "type": "object",
+        "description": "Filter events to this ISO-8601 time window.",
+        "properties": {
+          "start": {"type": "string", "format": "date-time"},
+          "end": {"type": "string", "format": "date-time"}
+        },
+        "additionalProperties": false
+      },
+      "keyword": {
+        "type": "string",
+        "description": "Case-insensitive substring match against the raw event XML."
+      },
+      "limit": {
+        "type": "integer",
+        "description": "Maximum number of events to return.",
+        "minimum": 1,
+        "maximum": 200,
+        "default": 50
+      }
+    },
+    "required": ["case_id"],
+    "additionalProperties": false
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "mem.run_plugin",
+  "description": "Run a Volatility3 plugin against the case's memory image. Results are cached per case+plugin; re-running an already-cached plugin returns the cached result instead of re-executing. First execution of an uncached plugin requires analyst confirmation (CPU/RAM cost).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "case_id": {
+        "type": "string",
+        "description": "The case UUID."
+      },
+      "plugin": {
+        "type": "string",
+        "description": "Which Volatility3 plugin to run.",
+        "enum": ["pslist", "pstree", "netscan", "malfind", "cmdline", "dlllist"]
+      }
+    },
+    "required": ["case_id", "plugin"],
+    "additionalProperties": false
+  }
+}

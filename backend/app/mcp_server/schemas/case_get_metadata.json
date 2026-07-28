@@ -1,0 +1,15 @@
+{
+  "name": "case.get_metadata",
+  "description": "Get a case's summary metadata: name, status, uploaded file list, and parse progress.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "case_id": {
+        "type": "string",
+        "description": "The case UUID."
+      }
+    },
+    "required": ["case_id"],
+    "additionalProperties": false
+  }
+}
