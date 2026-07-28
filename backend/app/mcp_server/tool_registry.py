@@ -137,9 +137,12 @@ async def dispatch_evtx_query_events(args: dict[str, Any], ctx: ToolContext) -> 
 
         case_id = case.id
         stmt = select(Event).where(Event.case_id == case_id)
-        if channel := args.get("channel"):
-            if isinstance(channel, str) and channel.strip().lower() not in ("", "null", "none"):
-                stmt = stmt.where(Event.channel == channel)
+        if (
+            (channel := args.get("channel"))
+            and isinstance(channel, str)
+            and channel.strip().lower() not in ("", "null", "none")
+        ):
+            stmt = stmt.where(Event.channel == channel)
 
         raw_event_id = args.get("event_id")
         if raw_event_id is not None:
@@ -155,38 +158,47 @@ async def dispatch_evtx_query_events(args: dict[str, Any], ctx: ToolContext) -> 
                         valid_ids.extend([int(d) for d in digits])
                 if valid_ids:
                     stmt = stmt.where(Event.event_id.in_(valid_ids))
-            elif isinstance(raw_event_id, str) and raw_event_id.strip().lower() not in ("", "null", "none"):
+            elif isinstance(raw_event_id, str) and raw_event_id.strip().lower() not in (
+                "",
+                "null",
+                "none",
+            ):
                 digits = re.findall(r"\d+", raw_event_id)
                 if len(digits) == 1:
                     stmt = stmt.where(Event.event_id == int(digits[0]))
                 elif len(digits) > 1:
                     stmt = stmt.where(Event.event_id.in_([int(d) for d in digits]))
 
-        if time_range := args.get("time_range"):
-            if isinstance(time_range, dict):
-                if start := time_range.get("start"):
-                    stmt = stmt.where(Event.time_created >= start)
-                if end := time_range.get("end"):
-                    stmt = stmt.where(Event.time_created <= end)
+        if (time_range := args.get("time_range")) and isinstance(time_range, dict):
+            if start := time_range.get("start"):
+                stmt = stmt.where(Event.time_created >= start)
+            if end := time_range.get("end"):
+                stmt = stmt.where(Event.time_created <= end)
 
         if raw_keyword := args.get("keyword"):
             keyword = str(raw_keyword).strip()
             split_pattern = r"\s+or\s+|\s*\|\s*|\s*,\s*"
-            terms = [t.strip() for t in re.split(split_pattern, keyword, flags=re.IGNORECASE) if t.strip()]
+            terms = [
+                t.strip()
+                for t in re.split(split_pattern, keyword, flags=re.IGNORECASE)
+                if t.strip()
+            ]
             if terms:
                 conds = []
                 for term in terms:
                     digits = re.findall(r"\d+", term)
                     if re.search(r"event\s*id", term, re.IGNORECASE) and digits:
                         target_id = int(digits[0])
-                        conds.append(or_(Event.event_id == target_id, Event.raw_xml.ilike(f"%<EventID>{target_id}</EventID>%")))
+                        conds.append(
+                            or_(
+                                Event.event_id == target_id,
+                                Event.raw_xml.ilike(f"%<EventID>{target_id}</EventID>%"),
+                            )
+                        )
                     else:
                         conds.append(Event.raw_xml.ilike(f"%{term}%"))
                 if conds:
-                    if len(conds) == 1:
-                        stmt = stmt.where(conds[0])
-                    else:
-                        stmt = stmt.where(or_(*conds))
+                    stmt = stmt.where(conds[0]) if len(conds) == 1 else stmt.where(or_(*conds))
 
         stmt = stmt.order_by(Event.time_created).limit(limit)
         rows = session.execute(stmt).scalars().all()

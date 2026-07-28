@@ -33,16 +33,14 @@ pick whichever is most relevant to the change:
 
 - [ ] **Re-read the diff cold** (close the editor, come back in a few
       minutes, review as if it were someone else's PR)
-- [ ] **Trace the change against the PRD** — does it match the relevant
-      section's spec, or does it introduce drift that needs documenting
-      as a deliberate decision (see `docs/context_transfer.md` §7/§7b for
-      the format used so far)?
+- [ ] **Trace the change against system specs** — does it match the intended
+      architecture or feature specification?
 - [ ] **Run the specific test file for the changed module and read the
       failure output before it passes**, not just the final green
       checkmark — a test that was never seen to fail is weaker evidence
       than one that was
 - [ ] **For anything touching `orchestrator/` or `mcp_server/`**: re-read
-      the change against the threat model (PRD §20) — does this introduce
+      the change against the threat model — does this introduce
       a new trust boundary crossing, and if so, is it gated the same way
       every other one is (deny-list + confirmation + injection scan)?
 - [ ] **For anything touching `core/`**: confirm the import-linter
@@ -72,6 +70,4 @@ npm run build
 
 ## Versioning
 
-Semantic Versioning. `0.x.y` until FR-1 through FR-12 are all complete;
-`1.0.0` at the first clean pass of the Production Checklist
-(`docs/KNOWLEDGE_BASE.md` → Production Checklist).
+Semantic Versioning (`0.x.y` for active development, `1.0.0` for production release).

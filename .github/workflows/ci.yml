@@ -41,10 +41,9 @@ jobs:
           path: backend/coverage.xml
 
   # Stage 3: Integration tests. Real SQLite (in-memory), a real MCP server
-  # subprocess, and Ollama mocked at the HTTP transport level (see
-  # docs/context_transfer.md for why a live Ollama isn't required for
-  # these -- the orchestration/permission-gate/injection-scanner logic
-  # downstream of the model response is exercised for real either way).
+  # subprocess, and Ollama mocked at the HTTP transport level (the
+  # orchestration/permission-gate/injection-scanner logic downstream
+  # of the model response is exercised for real either way).
   integration-tests:
     needs: lint
     runs-on: ubuntu-latest
@@ -56,10 +55,7 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest tests/integration -v
 
-  # Stage 4: Security scan. Only MEDIUM+ severity fails the build -- see
-  # docs/context_transfer.md for the two accepted LOW-severity
-  # informational bandit findings (mere presence of subprocess/xml.etree
-  # imports, both already hardened at their actual call sites).
+  # Stage 4: Security scan. Only MEDIUM+ severity fails the build.
   security-scan:
     runs-on: ubuntu-latest
     steps:

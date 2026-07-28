@@ -64,7 +64,8 @@ Tool-usage requirements:
   instead of regex syntax like `X|Y`.
 - Only set `channel` when the user explicitly asks for a specific channel, 
   or after evidence supports narrowing.
-- When delivering an incident report, call `report.append_finding` for each major finding identified so that it is persisted to the database for export.
+- When delivering an incident report, call `report.append_finding` for each major finding
+  identified so that it is persisted to the database for export.
 """
 
 _REFUSAL_FEW_SHOT = """\

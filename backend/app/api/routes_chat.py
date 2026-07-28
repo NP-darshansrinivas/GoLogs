@@ -4,6 +4,7 @@ can repopulate a chat panel on page load/reconnect."""
 
 from __future__ import annotations
 
+import json
 from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException, Request
@@ -11,8 +12,6 @@ from sqlalchemy import select
 
 from app.core.models import Case, ChatMessage
 from app.state import AppState
-
-import json
 
 router = APIRouter(prefix="/cases", tags=["chat"])
 

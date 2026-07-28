@@ -266,6 +266,7 @@ async def generate_report(
 
         if not report_findings:
             from app.core.models import ChatMessage
+
             chat_rows = (
                 session.execute(
                     select(ChatMessage)
@@ -290,7 +291,11 @@ async def generate_report(
             tr_str = f"{time_range[0]} to {time_range[1]}" if time_range[0] else "N/A"
             report_findings.append(
                 ReportFinding(
-                    finding_text=f"**Log Evidence Overview**: Case '{case.name}' contains {len(events)} event record(s) analyzed across channel(s): {ch_str}. Observed time range: {tr_str}.",
+                    finding_text=(
+                        f"**Log Evidence Overview**: Case '{case.name}' contains {len(events)} "
+                        f"event record(s) analyzed across channel(s): {ch_str}. "
+                        f"Observed time range: {tr_str}."
+                    ),
                     evidence_refs=[],
                     created_at=datetime.now(),
                 )

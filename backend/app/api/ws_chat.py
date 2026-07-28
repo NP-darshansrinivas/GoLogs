@@ -24,6 +24,7 @@ the confused-deputy gap the permission gate exists to close.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import structlog
@@ -32,7 +33,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.models import Case, ChatMessage, Event
-from app.mcp_server.tool_registry import load_tool_schemas
+from app.mcp_server.tool_registry import _get_case, load_tool_schemas
 from app.orchestrator.prompt_builder import build_case_summary_message, build_system_prompt
 from app.orchestrator.tool_call_loop import (
     ConfirmationRequiredEvent,
@@ -134,8 +135,6 @@ def _build_case_summary(session: Session, case: Case) -> dict[str, str]:
     return build_case_summary_message(case.id, case.name, len(events), time_range, hosts)
 
 
-from app.mcp_server.tool_registry import _get_case, load_tool_schemas
-
 @router.websocket("/ws/cases/{case_id}/chat")
 async def chat_websocket(websocket: WebSocket, case_id: str) -> None:
     state: AppState = websocket.app.state.gologs
@@ -143,7 +142,7 @@ async def chat_websocket(websocket: WebSocket, case_id: str) -> None:
     with state.session_factory() as session:
         case = _get_case(session, case_id)
         if case is None:
-            await websocket.close(code=4404, reason=f"No case found in database")
+            await websocket.close(code=4404, reason="No case found in database")
             return
         case_id = case.id
 

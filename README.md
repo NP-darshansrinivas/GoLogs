@@ -289,7 +289,7 @@ To run the containerized backend and frontend stack using Docker Compose:
 docker compose up --build
 ```
 
-*Note: Ollama runs natively on the host machine to leverage hardware acceleration (`localhost:11434`). Refer to [`docs/KNOWLEDGE_BASE.md`](docs/KNOWLEDGE_BASE.md) for networking configuration.*
+*Note: Ollama runs natively on the host machine to leverage hardware acceleration (`localhost:11434`).*
 
 ---
 

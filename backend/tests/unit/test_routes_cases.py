@@ -109,7 +109,9 @@ def _make_request_with_state(state: Any) -> Request:
 
 
 class TestIngestCaseFiles:
-    def test_returns_early_when_case_not_found(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_returns_early_when_case_not_found(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         session = _IngestSession(case_obj=None)
         session_factory = _SessionFactoryQueue(session)
         log_error = Mock()
@@ -145,7 +147,9 @@ class TestIngestCaseFiles:
             normalized_fields={"k": "v"},
         )
 
-        monkeypatch.setattr(routes_cases.fs_sandbox, "resolve_case_path", lambda *_args: tmp_path / _args[-1])
+        monkeypatch.setattr(
+            routes_cases.fs_sandbox, "resolve_case_path", lambda *_args: tmp_path / _args[-1]
+        )
         monkeypatch.setattr(routes_cases, "parse_evtx_file", fake_parse)
         monkeypatch.setattr(routes_cases, "normalize_record", lambda _xml: normalized)
         log_error = Mock()
@@ -254,7 +258,9 @@ class TestGetCase:
     def test_returns_404_for_unknown_case(self, tmp_path: Path) -> None:
         session = Mock()
         session.get.return_value = None
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.get("/api/cases/nope")
@@ -268,7 +274,9 @@ class TestGetCase:
         session = Mock()
         session.get.return_value = case
         session.query.return_value = _QueryStub(count_value=7)
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.get("/api/cases/case-1")
@@ -287,7 +295,9 @@ class TestGetEvents:
     def test_returns_404_when_case_missing(self, tmp_path: Path) -> None:
         session = Mock()
         session.get.return_value = None
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.get("/api/cases/nope/events")
@@ -310,7 +320,9 @@ class TestGetEvents:
         session = Mock()
         session.get.return_value = Case(id="case-22", name="Events", status="parsed")
         session.execute.return_value = _ScalarsResult([event])
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.get(
@@ -343,7 +355,9 @@ class TestGetEvents:
         session = Mock()
         session.get.return_value = Case(id="case-plain", name="Plain", status="parsed")
         session.execute.return_value = _ScalarsResult([])
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.get("/api/cases/case-plain/events")
@@ -356,7 +370,9 @@ class TestGetAuditTrail:
     def test_returns_404_when_case_missing(self, tmp_path: Path) -> None:
         session = Mock()
         session.get.return_value = None
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.get("/api/cases/missing/audit")
@@ -378,7 +394,9 @@ class TestGetAuditTrail:
         session = Mock()
         session.get.return_value = Case(id="case-5", name="Audit", status="parsed")
         session.execute.return_value = _ScalarsResult([audit])
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.get("/api/cases/case-5/audit")
@@ -400,7 +418,9 @@ class TestGetAuditTrail:
 
 class TestGenerateReport:
     def test_rejects_invalid_format(self, tmp_path: Path) -> None:
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(Mock()), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(Mock()), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.post("/api/cases/case-6/report", params={"format": "docx"})
@@ -411,14 +431,18 @@ class TestGenerateReport:
     def test_returns_404_for_missing_case(self, tmp_path: Path) -> None:
         session = Mock()
         session.get.return_value = None
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.post("/api/cases/missing/report", params={"format": "markdown"})
 
         assert response.status_code == 404
 
-    def test_generates_markdown_payload(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_generates_markdown_payload(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         event_early = Event(
             case_id="case-7",
             channel="System",
@@ -477,7 +501,9 @@ class TestGenerateReport:
             return "MARKDOWN-REPORT"
 
         monkeypatch.setattr(routes_cases, "build_markdown_report", fake_markdown_builder)
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.post("/api/cases/case-7/report", params={"format": "markdown"})
@@ -501,7 +527,9 @@ class TestGenerateReport:
         session.query.return_value = _QueryStub(rows=[])
         session.execute.side_effect = [_ScalarsResult([]), _ScalarsResult([]), _ScalarsResult([])]
         monkeypatch.setattr(routes_cases, "build_pdf_report", lambda _data: b"%PDF-test")
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.post("/api/cases/case-8/report", params={"format": "pdf"})
@@ -517,7 +545,9 @@ class TestReparseCase:
     def test_returns_404_for_unknown_case(self, tmp_path: Path) -> None:
         session = Mock()
         session.get.return_value = None
-        state = SimpleNamespace(session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path)
+        state = SimpleNamespace(
+            session_factory=_SessionFactoryQueue(session), case_storage_dir=tmp_path
+        )
 
         with _make_client(state) as client:
             response = client.post("/api/cases/none/reparse")

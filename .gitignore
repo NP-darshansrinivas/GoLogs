@@ -47,3 +47,9 @@ dist/
 
 # --- Logs ---
 *.log
+
+# --- Internal System Specs & Handoffs ---
+docs/PRD.md
+docs/KNOWLEDGE_BASE.md
+docs/context_transfer.md
+docs/session_handoff.md
