@@ -44,7 +44,9 @@ class TestListToolsImpl:
         schemas = load_tool_schemas()
         tools = await list_tools_impl(schemas)
         by_name = {t.name: t for t in tools}
-        assert by_name["mem.run_plugin"].inputSchema == schemas["mem.run_plugin"]["inputSchema"]
+        tool = by_name["mem.run_plugin"]
+        input_schema = tool.input_schema if hasattr(tool, "input_schema") else tool.inputSchema
+        assert input_schema == schemas["mem.run_plugin"]["inputSchema"]
 
 
 class TestCallToolImpl:

@@ -103,7 +103,10 @@ def build_server(ctx: ToolContext) -> Server:
             tools = await list_tools_impl(schemas)
             return types.ListToolsResult(tools=tools)
 
-        server_any.request_handlers[types.ListToolsRequest] = handle_list_tools_req
+        request_handlers = getattr(server_any, "request_handlers", None)
+        if request_handlers is None:
+            request_handlers = server_any._request_handlers
+        request_handlers[types.ListToolsRequest] = handle_list_tools_req
 
     if hasattr(server, "call_tool") and callable(server.call_tool):
 
@@ -125,7 +128,10 @@ def build_server(ctx: ToolContext) -> Server:
                 is_error=False,
             )
 
-        server_any.request_handlers[types.CallToolRequest] = handle_call_tool_req
+        request_handlers = getattr(server_any, "request_handlers", None)
+        if request_handlers is None:
+            request_handlers = server_any._request_handlers
+        request_handlers[types.CallToolRequest] = handle_call_tool_req
 
     return server
 
