@@ -104,3 +104,10 @@ class TestBuildServer:
             assert built_ctx.case_storage_dir == (tmp_path / "cases").resolve()
         finally:
             config_module._settings = None  # don't leak state into other tests
+
+    def test_build_server_registers_tools_handlers_for_lowlevel_server(self, ctx) -> None:
+        server = build_server(ctx)
+        request_handlers = getattr(server, "_request_handlers", {})
+
+        assert "tools/list" in request_handlers
+        assert "tools/call" in request_handlers
