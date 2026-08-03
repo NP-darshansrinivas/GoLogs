@@ -18,6 +18,7 @@ that registers them with the MCP SDK's `Server` object.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, cast
 
@@ -91,15 +92,42 @@ def build_server(ctx: ToolContext) -> Server:
     schemas = load_tool_schemas()
     server_any = cast(Any, server)
 
-    @server_any.list_tools()
-    async def handle_list_tools() -> list[types.Tool]:
-        return await list_tools_impl(schemas)
+    if hasattr(server, "list_tools") and callable(server.list_tools):
 
-    @server_any.call_tool()
-    async def handle_call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        # The SDK auto-serializes a returned dict to JSON text content; see
-        # mcp.server.lowlevel.server.Server.call_tool's docstring.
-        return await call_tool_impl(name, arguments, ctx)
+        @server_any.list_tools()
+        async def handle_list_tools() -> list[types.Tool]:
+            return await list_tools_impl(schemas)
+    else:
+
+        async def handle_list_tools_req(req: types.ListToolsRequest) -> types.ServerResult:
+            tools = await list_tools_impl(schemas)
+            return types.ServerResult(types.ListToolsResult(tools=tools))
+
+        server_any.request_handlers[types.ListToolsRequest] = handle_list_tools_req
+
+    if hasattr(server, "call_tool") and callable(server.call_tool):
+
+        @server_any.call_tool()
+        async def handle_call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+            # The SDK auto-serializes a returned dict to JSON text content; see
+            # mcp.server.lowlevel.server.Server.call_tool's docstring.
+            return await call_tool_impl(name, arguments, ctx)
+    else:
+
+        async def handle_call_tool_req(req: types.CallToolRequest) -> types.ServerResult:
+            tool_name = req.params.name
+            arguments = req.params.arguments or {}
+            res_dict = await call_tool_impl(tool_name, arguments, ctx)
+            sc = res_dict if isinstance(res_dict, dict) else None
+            return types.ServerResult(
+                types.CallToolResult(
+                    content=[types.TextContent(type="text", text=json.dumps(res_dict, indent=2))],
+                    structuredContent=sc,
+                    isError=False,
+                )
+            )
+
+        server_any.request_handlers[types.CallToolRequest] = handle_call_tool_req
 
     return server
 
