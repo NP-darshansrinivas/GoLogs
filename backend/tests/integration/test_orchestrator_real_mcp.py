@@ -94,7 +94,11 @@ def _make_real_mcp_tool_executor(session: ClientSession):
 
     async def executor(tool_name: str, arguments: dict) -> dict:
         result = await session.call_tool(tool_name, arguments)
-        return result.structuredContent
+        return (
+            result.structured_content
+            if hasattr(result, "structured_content")
+            else result.structuredContent
+        )
 
     return executor
 

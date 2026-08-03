@@ -99,11 +99,20 @@ def build_server(ctx: ToolContext) -> Server:
             return await list_tools_impl(schemas)
     else:
 
-        async def handle_list_tools_req(req: types.ListToolsRequest) -> types.ServerResult:
+        async def handle_list_tools_req(*_args: Any) -> types.ServerResult:
             tools = await list_tools_impl(schemas)
-            return types.ServerResult(types.ListToolsResult(tools=tools))
+            return types.ListToolsResult(tools=tools)
 
-        server_any.request_handlers[types.ListToolsRequest] = handle_list_tools_req
+        if hasattr(server_any, "add_request_handler") and callable(server_any.add_request_handler):
+            list_tools_method = types.ListToolsRequest.model_fields["method"].default
+            paginated_params = getattr(types, "PaginatedRequestParams", types.RequestParams)
+            server_any.add_request_handler(list_tools_method, paginated_params, handle_list_tools_req)
+        else:
+            request_handlers = getattr(server_any, "request_handlers", None)
+            if request_handlers is None:
+                request_handlers = server_any._request_handlers
+            request_handlers[types.ListToolsRequest] = handle_list_tools_req
+            request_handlers[types.ListToolsRequest.model_fields["method"].default] = handle_list_tools_req
 
     if hasattr(server, "call_tool") and callable(server.call_tool):
 
@@ -114,20 +123,27 @@ def build_server(ctx: ToolContext) -> Server:
             return await call_tool_impl(name, arguments, ctx)
     else:
 
-        async def handle_call_tool_req(req: types.CallToolRequest) -> types.ServerResult:
-            tool_name = req.params.name
-            arguments = req.params.arguments or {}
+        async def handle_call_tool_req(*_args: Any) -> types.ServerResult:
+            req_or_params = _args[-1]
+            tool_name = req_or_params.name
+            arguments = req_or_params.arguments or {}
             res_dict = await call_tool_impl(tool_name, arguments, ctx)
             sc = res_dict if isinstance(res_dict, dict) else None
-            return types.ServerResult(
-                types.CallToolResult(
-                    content=[types.TextContent(type="text", text=json.dumps(res_dict, indent=2))],
-                    structuredContent=sc,
-                    isError=False,
-                )
+            return types.CallToolResult(
+                content=[types.TextContent(type="text", text=json.dumps(res_dict, indent=2))],
+                structured_content=sc,
+                is_error=False,
             )
 
-        server_any.request_handlers[types.CallToolRequest] = handle_call_tool_req
+        if hasattr(server_any, "add_request_handler") and callable(server_any.add_request_handler):
+            call_tool_method = types.CallToolRequest.model_fields["method"].default
+            server_any.add_request_handler(call_tool_method, types.CallToolRequestParams, handle_call_tool_req)
+        else:
+            request_handlers = getattr(server_any, "request_handlers", None)
+            if request_handlers is None:
+                request_handlers = server_any._request_handlers
+            request_handlers[types.CallToolRequest] = handle_call_tool_req
+            request_handlers[types.CallToolRequest.model_fields["method"].default] = handle_call_tool_req
 
     return server
 

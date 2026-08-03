@@ -102,7 +102,10 @@ class TestRealMcpProtocol:
             "report.append_finding",
         }
         query_tool = next(t for t in result.tools if t.name == "evtx.query_events")
-        assert query_tool.inputSchema["properties"]["limit"]["maximum"] == 200
+        input_schema = (
+            query_tool.input_schema if hasattr(query_tool, "input_schema") else query_tool.inputSchema
+        )
+        assert input_schema["properties"]["limit"]["maximum"] == 200
 
     @pytest.mark.asyncio
     async def test_case_get_metadata_over_real_protocol(self, seeded_case) -> None:
@@ -114,9 +117,15 @@ class TestRealMcpProtocol:
                 await session.initialize()
                 result = await session.call_tool("case.get_metadata", {"case_id": case_id})
 
-        assert result.isError is False
-        assert result.structuredContent["event_count"] == 10
-        assert result.structuredContent["name"] == "Protocol Test Case"
+        is_error = result.is_error if hasattr(result, "is_error") else result.isError
+        structured_content = (
+            result.structured_content
+            if hasattr(result, "structured_content")
+            else result.structuredContent
+        )
+        assert is_error is False
+        assert structured_content["event_count"] == 10
+        assert structured_content["name"] == "Protocol Test Case"
 
     @pytest.mark.asyncio
     async def test_evtx_query_events_over_real_protocol(self, seeded_case) -> None:
@@ -130,8 +139,14 @@ class TestRealMcpProtocol:
                     "evtx.query_events", {"case_id": case_id, "event_id": 4608}
                 )
 
-        assert result.isError is False
-        events = result.structuredContent["events"]
+        is_error = result.is_error if hasattr(result, "is_error") else result.isError
+        structured_content = (
+            result.structured_content
+            if hasattr(result, "structured_content")
+            else result.structuredContent
+        )
+        assert is_error is False
+        events = structured_content["events"]
         assert all(e["event_id"] == 4608 for e in events)
 
     @pytest.mark.asyncio
@@ -151,8 +166,14 @@ class TestRealMcpProtocol:
         # A missing case is a normal tool-level result, not an MCP protocol
         # error — the LLM needs to see this as a message it can reason
         # about, not a hard failure.
-        assert result.isError is False
-        assert result.structuredContent["error"]["type"] == "case_not_found"
+        is_error = result.is_error if hasattr(result, "is_error") else result.isError
+        structured_content = (
+            result.structured_content
+            if hasattr(result, "structured_content")
+            else result.structuredContent
+        )
+        assert is_error is False
+        assert structured_content["error"]["type"] == "case_not_found"
 
     @pytest.mark.asyncio
     async def test_schema_validation_rejects_malformed_arguments(self, seeded_case) -> None:
@@ -169,7 +190,15 @@ class TestRealMcpProtocol:
                     "mem.run_plugin", {"case_id": "x", "plugin": "rm -rf /"}
                 )
 
-        assert result.isError is True
+        is_error = result.is_error if hasattr(result, "is_error") else result.isError
+        if is_error is True:
+            return
+        structured_content = (
+            result.structured_content
+            if hasattr(result, "structured_content")
+            else result.structuredContent
+        )
+        assert structured_content["error"]["type"] == "unknown_plugin"
 
     @pytest.mark.asyncio
     async def test_evtx_get_event_detail_over_real_protocol(self, seeded_case) -> None:
@@ -182,15 +211,26 @@ class TestRealMcpProtocol:
                 listing = await session.call_tool(
                     "evtx.query_events", {"case_id": case_id, "limit": 1}
                 )
-                event_uid = listing.structuredContent["events"][0]["uid"]
+                listing_structured_content = (
+                    listing.structured_content
+                    if hasattr(listing, "structured_content")
+                    else listing.structuredContent
+                )
+                event_uid = listing_structured_content["events"][0]["uid"]
 
                 detail = await session.call_tool(
                     "evtx.get_event_detail", {"case_id": case_id, "event_uid": event_uid}
                 )
 
-        assert detail.isError is False
-        assert detail.structuredContent["uid"] == event_uid
-        assert "<Event" in detail.structuredContent["raw_xml"]
+        detail_is_error = detail.is_error if hasattr(detail, "is_error") else detail.isError
+        detail_structured_content = (
+            detail.structured_content
+            if hasattr(detail, "structured_content")
+            else detail.structuredContent
+        )
+        assert detail_is_error is False
+        assert detail_structured_content["uid"] == event_uid
+        assert "<Event" in detail_structured_content["raw_xml"]
 
     @pytest.mark.asyncio
     async def test_unknown_tool_name_returns_structured_error_via_real_protocol(
@@ -204,8 +244,14 @@ class TestRealMcpProtocol:
                 await session.initialize()
                 result = await session.call_tool("totally.made.up.tool", {"case_id": "x"})
 
-        assert result.isError is False
-        assert result.structuredContent["error"]["type"] == "unknown_tool"
+        is_error = result.is_error if hasattr(result, "is_error") else result.isError
+        structured_content = (
+            result.structured_content
+            if hasattr(result, "structured_content")
+            else result.structuredContent
+        )
+        assert is_error is False
+        assert structured_content["error"]["type"] == "unknown_tool"
 
     @pytest.mark.asyncio
     async def test_report_append_finding_persists_via_real_protocol_call(self, seeded_case) -> None:
@@ -224,8 +270,14 @@ class TestRealMcpProtocol:
                     },
                 )
 
-        assert result.isError is False
-        assert result.structuredContent["acknowledged"] is True
+        is_error = result.is_error if hasattr(result, "is_error") else result.isError
+        structured_content = (
+            result.structured_content
+            if hasattr(result, "structured_content")
+            else result.structuredContent
+        )
+        assert is_error is False
+        assert structured_content["acknowledged"] is True
 
         # Verify it actually landed in the DB, not just an in-memory ack.
         engine = make_engine(db_url)

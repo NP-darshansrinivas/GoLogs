@@ -44,7 +44,9 @@ class TestListToolsImpl:
         schemas = load_tool_schemas()
         tools = await list_tools_impl(schemas)
         by_name = {t.name: t for t in tools}
-        assert by_name["mem.run_plugin"].inputSchema == schemas["mem.run_plugin"]["inputSchema"]
+        tool = by_name["mem.run_plugin"]
+        input_schema = tool.input_schema if hasattr(tool, "input_schema") else tool.inputSchema
+        assert input_schema == schemas["mem.run_plugin"]["inputSchema"]
 
 
 class TestCallToolImpl:
@@ -102,3 +104,10 @@ class TestBuildServer:
             assert built_ctx.case_storage_dir == (tmp_path / "cases").resolve()
         finally:
             config_module._settings = None  # don't leak state into other tests
+
+    def test_build_server_registers_tools_handlers_for_lowlevel_server(self, ctx) -> None:
+        server = build_server(ctx)
+        request_handlers = getattr(server, "_request_handlers", {})
+
+        assert "tools/list" in request_handlers
+        assert "tools/call" in request_handlers
