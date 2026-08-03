@@ -19,7 +19,7 @@ that registers them with the MCP SDK's `Server` object.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import mcp.server.stdio
 import mcp.types as types
@@ -37,14 +37,23 @@ log = structlog.get_logger(__name__)
 
 async def list_tools_impl(schemas: dict[str, Any]) -> list[types.Tool]:
     """Build the Tool list from loaded schemas. Pure function, no I/O."""
-    return [
-        types.Tool(
-            name=schema["name"],
-            description=schema["description"],
-            inputSchema=schema["inputSchema"],
-        )
-        for schema in schemas.values()
-    ]
+    tools: list[types.Tool] = []
+    tool_cls = cast(Any, types.Tool)
+    for schema in schemas.values():
+        try:
+            t: types.Tool = tool_cls(
+                name=schema["name"],
+                description=schema["description"],
+                inputSchema=schema["inputSchema"],
+            )
+        except TypeError:
+            t = tool_cls(
+                name=schema["name"],
+                description=schema["description"],
+                input_schema=schema["inputSchema"],
+            )
+        tools.append(t)
+    return tools
 
 
 async def call_tool_impl(name: str, arguments: dict[str, Any], ctx: ToolContext) -> dict[str, Any]:
@@ -80,14 +89,13 @@ def build_server(ctx: ToolContext) -> Server:
     settings = get_settings()
     server: Server = Server(settings.product_name.lower())
     schemas = load_tool_schemas()
+    server_any = cast(Any, server)
 
-    # mcp SDK's list_tools decorator has no type annotations in the
-    # installed version (`def list_tools(self):`) — third-party stub gap.
-    @server.list_tools()  # type: ignore[no-untyped-call]
+    @server_any.list_tools()
     async def handle_list_tools() -> list[types.Tool]:
         return await list_tools_impl(schemas)
 
-    @server.call_tool()
+    @server_any.call_tool()
     async def handle_call_tool(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         # The SDK auto-serializes a returned dict to JSON text content; see
         # mcp.server.lowlevel.server.Server.call_tool's docstring.

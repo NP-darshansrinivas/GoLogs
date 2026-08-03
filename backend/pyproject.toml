@@ -35,6 +35,7 @@ dev = [
     "import-linter>=2.1",
     "locust>=2.32",
     "types-defusedxml>=0.7",
+    "types-reportlab",
     "pypdf>=6.14.2",  # test-only: verifies our own generated PDFs are valid
 ]
 
@@ -72,7 +73,7 @@ strict = true
 packages = ["app"]
 
 [[tool.mypy.overrides]]
-module = ["Evtx.*"]
+module = ["Evtx.*", "reportlab.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

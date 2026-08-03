@@ -35,8 +35,9 @@ class AppState:
     async def tool_executor(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         try:
             result = await self.mcp_session.call_tool(tool_name, arguments)
-            if result.structuredContent is not None and isinstance(result.structuredContent, dict):
-                return result.structuredContent
+            sc = getattr(result, "structured_content", getattr(result, "structuredContent", None))
+            if sc is not None and isinstance(sc, dict):
+                return sc
 
             for content_block in result.content or []:
                 text = getattr(content_block, "text", None)
