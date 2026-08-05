@@ -102,7 +102,12 @@ class TestRealMcpProtocol:
             "report.append_finding",
         }
         query_tool = next(t for t in result.tools if t.name == "evtx.query_events")
-        assert query_tool.inputSchema["properties"]["limit"]["maximum"] == 200
+        schema = (
+            query_tool.input_schema
+            if hasattr(query_tool, "input_schema")
+            else query_tool.inputSchema
+        )
+        assert schema["properties"]["limit"]["maximum"] == 200
 
     @pytest.mark.asyncio
     async def test_case_get_metadata_over_real_protocol(self, seeded_case) -> None:
